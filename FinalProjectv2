@@ -1,0 +1,191 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+import streamlit as st
+import numpy as np
+
+# read in data
+def readData():
+    return pd.read_csv('Uber Data (2).csv').set_index('id')
+
+selectedGraph = st.sidebar.radio('Please select the graph:', ['Home', 'Graph 1', 'Graph 2', 'Graph 3', 'Graph 4'])
+if selectedGraph == 'Home':
+    st.title('Welcome to Uber Data')
+    st.write('Welcome to my final project. Here I take a look at the difference in percent of passengers of uber rides. In addition to this, I take a look at specific ride fares and passengers in relation to where they are picked up in the city')
+    st.image('UberDataPic.png')
+
+elif selectedGraph == 'Graph 1':
+    st.title('Pie Chart: Breakdown of Passengers')
+    st.write('As you can easily see from the chart, the majority of rides are for 1 person')
+    default_timeOfPickup = 1320
+    default_fare = 50
+    default_passengers = 4
+    default_passengerWords = ['One Dollar and No Cents', 'Two Dollars and No Cents', 'Three Dollars and No Cents', 'Four Dollars and No Cents', 'Five Dollars and No Cents', 'Six Dollars and No Cents']
+
+    ## Pie chart of number of passengers
+    df = readData()
+    countOfPass = df['passengerCount'].value_counts()
+    possibleNumbers = [1, 2, 3, 4, 5, 6]
+    fig1, ax = plt.subplots()
+    ax.pie(countOfPass, labels= possibleNumbers, autopct='%.1f%%')
+    ax.set_title('Number of Passengers in a ride')
+    st.pyplot(fig1)
+
+
+
+elif selectedGraph == ('Graph 2'):
+
+
+    option2 = st.selectbox(
+         'How many passengers would you like to see?'
+         '1, 2, 3, 4, 5, or 6',
+         (1, 2, 3, 4, 5, 6))
+
+    st.write('You selected:', option2)
+    default_timeOfPickup = 1200
+    default_fare = 50
+    default_passengers = option2
+    default_passengerWords = ['One Dollar and No Cents', 'Two Dollars and No Cents', 'Three Dollars and No Cents', 'Four Dollars and No Cents', 'Five Dollars and No Cents', 'Six Dollars and No Cents']
+    st.title(f'Map: Where someone is picked up at 8PM-12PM; based on price (>$50) and {option2} of passengers')
+
+    # filter data
+    def filterData(fareOfRide, numOfPass):
+        df = readData()
+        df = df.loc[df['fareAmount'] > fareOfRide]
+        df = df.loc[df['passengerCount'] > numOfPass]
+        df.rename(columns={'pickupLat':'lat', 'pickupLong':'lon'}, inplace=True)
+        st.title('')
+        st.map(df)
+        return df
+
+
+    data = filterData(default_fare, default_passengers)
+    print(data)
+
+
+
+elif selectedGraph == ('Graph 3'):
+
+    option = st.selectbox(
+         'What time would you like to observe after (ex. 10PM shows 10PM and later)'
+         '1200 = 8PM, 1260 = 9PM, 1320 = 10PM, 1380 = 11PM',
+         (1200, 1260, 1320, 1380))
+
+    st.write('You selected:', option)
+
+    default_timeOfPickup = option
+    default_fare = 15
+    default_passengers = 2
+    default_passengerWords = ['One Dollar and No Cents', 'Two Dollars and No Cents', 'Three Dollars and No Cents', 'Four Dollars and No Cents', 'Five Dollars and No Cents', 'Six Dollars and No Cents']
+
+    ## bar chart of passengers per ride after 10PM
+    def filterData(fareOfRide, numOfPass, timeOfPickup):
+        df = readData()
+        df = df.loc[df['fareAmount'] > fareOfRide]
+        df = df.loc[df['passengerCount'] > numOfPass]
+        df = df.loc[df['minutes'] > timeOfPickup]
+        df.rename(columns={'pickupLat':'lat', 'pickupLong':'lon'}, inplace=True)
+        st.title(f'Map of Pickup Locations where it cost more than $15 and 2 or more passengers after {(option/60)-12}0 PM')
+        st.map(df)
+        return df
+
+    data = filterData(default_fare, default_passengers, default_timeOfPickup)
+    print(data)
+
+elif selectedGraph == ('Graph 4'):
+    option3 = st.selectbox(
+         'Please select a fare you would like to observe. It will be that number and on. (Ex. 10+)',
+         (10.00, 20.00, 30.00, 40.00, 50.00))
+
+    st.write('You selected:', option3)
+
+    default_timeOfPickup = 1200
+    default_fare = option3
+    default_passengers = 2
+    default_passengerWords = ['One Dollar and No Cents', 'Two Dollars and No Cents', 'Three Dollars and No Cents', 'Four Dollars and No Cents', 'Five Dollars and No Cents', 'Six Dollars and No Cents']
+
+    ## bar chart of passengers per ride after 10PM
+    def filterData(fareOfRide, numOfPass, timeOfPickup):
+        df = readData()
+        df = df.loc[df['fareAmount'] > fareOfRide]
+        df = df.loc[df['passengerCount'] > numOfPass]
+        df = df.loc[df['minutes'] > timeOfPickup]
+        df.rename(columns={'pickupLat':'lat', 'pickupLong':'lon'}, inplace=True)
+        st.title(f'Map of Pickup Locations where is cost at least ${option3} with 3 or more passengers, from 8-12PM')
+        st.map(df)
+        return df
+
+    data = filterData(default_fare, default_passengers, default_timeOfPickup)
+    print(data)
+
+else:
+    ## prices of rides by passenger
+    def passenger_prices(df):
+        prices = [row['fareAmount'] for ind, row in df.itterrows]
+        numOfPassen = [row['passengerCount'] for ind, row in df.itterrows]
+
+        dict = {}
+        for passengerCount in numOfPassen:
+            dict[passengerCount] = []
+
+        for i in range(len(prices)):
+            dict[numOfPassen[i]].append(prices[i])
+
+        return dict
+
+    def passengerAverages(dictPrices):
+        dict1 = {}
+        for key in dictPrices.keys():
+            dict1[key] = np.mean(dictPrices[key])
+
+        return(dict1)
+        print(dict1)
+
+    ### create a list of each ride, then calculate the average cost per ride
+    df = readData()
+    onePassList = []
+    twoPassList = []
+    threePassList = []
+    fourPassList = []
+    fivePassList = []
+    sixPassList = []
+
+
+    if df['passenger'] == 1:
+        onePassList = onePassList.append(df['fareAmount'])
+    elif df['passenger'] == 2:
+        twoPassList = twoPassList.append(df['fareAmount'])
+    elif df['passenger'] == 3:
+        threePassList = threePassList.append(df['fareAmount'])
+    elif df['passenger'] == 4:
+        fourPassList = fourPassList.append(df['fareAmount'])
+    elif df['passenger'] == 5:
+        fivePassList = fivePassList.append(df['fareAmount'])
+    elif df['passenger'] == 6:
+        sixPassList = sixPassList.append(df['fareAmount'])
+
+    listOneAve = np.mean(onePassList)
+    listTwoAve = np.mean(twoPassList)
+    listThreeAve = np.mean(threePassList)
+    listFourAve = np.mean(fourPassList)
+    listFiveAve = np.mean(fivePassList)
+    listSixAve = np.mean(sixPassList)
+
+
+    ### create a list of rides between 10PM and 12PM, and then another list of rides between 12PM and 2AM
+    df = readData()
+    listOfRidesBtwn10And12 = []
+    listofRidesBtwn12And2 =[]
+    if df[df['minutes'] > 1320]:
+        listOfRidesBtwn10And12 = listOfRidesBtwn10And12.append()
+    elif df[df['minutes'] < 120]:
+        listofRidesBtwn12And2 = listofRidesBtwn12And2.append()
+
+
+    '''##not sure why this doesn't work 
+    df = filterData(default_passengerWords, df)
+
+    def count_passengers(passengerCountWord, df):
+    return [df.loc[df['passengerCountWord'].isin([passengerCountWord])].shape[0] for passengerCountWord in default_passengerWords]
+
+    print(lst)
+    print()'''
